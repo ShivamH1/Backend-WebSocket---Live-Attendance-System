@@ -61,7 +61,13 @@ wsApp.ws("/ws", function (ws: any, req: any) {
     });
 
     ws.on("message", async (msg: any) => {
-      const message = JSON.parse(msg.toString());
+      let message: any;
+      try {
+        message = JSON.parse(msg.toString());
+      } catch (e) {
+        sendError(ws, "Invalid message format");
+        return;
+      }
 
       switch (message.event) {
         case "ATTENDANCE_MARKED": {
@@ -205,6 +211,11 @@ wsApp.ws("/ws", function (ws: any, req: any) {
               total: finalTotal,
             },
           });
+          break;
+        }
+
+        default: {
+          sendError(ws, "Unknown event");
           break;
         }
       }
@@ -396,16 +407,23 @@ app.post(
       return;
     }
 
-    classRoom.studentIds.push(new mongoose.Types.ObjectId(studentId));
-    await classRoom.save();
+    // Prevent duplicate students
+    const studentIdAlreadyExists = classRoom.studentIds.some((id) => id.toString() === studentId);
+    if (!studentIdAlreadyExists) {
+      classRoom.studentIds.push(new mongoose.Types.ObjectId(studentId));
+      await classRoom.save();
+    }
+
+    // Re-fetch to get updated document
+    const updatedClassRoom = await ClassModel.findById(classId);
 
     res.status(200).json({
       success: true,
       data: {
-        _id: classRoom._id.toString(),
-        className: classRoom.className,
-        teacherId: classRoom.teacherId?.toString() || "",
-        studentIds: classRoom.studentIds.map((id) => id.toString()),
+        _id: updatedClassRoom!._id.toString(),
+        className: updatedClassRoom!.className,
+        teacherId: updatedClassRoom!.teacherId?.toString() || "",
+        studentIds: updatedClassRoom!.studentIds.map((id) => id.toString()),
       },
     });
   }
@@ -452,7 +470,7 @@ app.get("/class/:id", authMiddleware, async (req: Request, res: Response) => {
   } else {
     res.status(403).json({
       success: false,
-      error: "Forbidden, not class teacher or student",
+      error: "Forbidden, not class teacher",
     });
     return;
   }
@@ -531,7 +549,15 @@ app.post(
     }
     const classRoom = await ClassModel.findById(data.classId);
 
-    if (!classRoom || classRoom.teacherId?.toString() !== req.userId) {
+    if (!classRoom) {
+      res.status(404).json({
+        success: false,
+        error: "Class not found",
+      });
+      return;
+    }
+
+    if (classRoom.teacherId?.toString() !== req.userId) {
       res.status(403).json({
         success: false,
         error: "Forbidden, not class teacher",

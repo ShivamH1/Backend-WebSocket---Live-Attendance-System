@@ -45,7 +45,7 @@ export const authMiddleware = async (
   } catch (error) {
     res.status(401).json({
       success: false,
-      error: "Unauthorized, invalid token",
+      error: "Unauthorized, token missing or invalid",
     });
     return;
   }
