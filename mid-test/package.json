@@ -1,0 +1,22 @@
+{
+  "name": "attendance-system-tests",
+  "version": "1.0.0",
+  "description": "Tests for the Live Attendance System - run against any compliant server",
+  "main": "index.js",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "vitest": "^4.0.15",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "@vitest/ui": "4.0.15"
+  }
+}

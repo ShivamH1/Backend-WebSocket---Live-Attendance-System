@@ -1,0 +1,242 @@
+{
+  "info": {
+    "name": "Attendance WebSocket API",
+    "description": "WebSocket collection for real-time attendance management.\n\n## Connection Setup\n\n1. First, login via REST API to get a JWT token\n2. Connect to WebSocket: `ws://localhost:3000/ws?token=<JWT_TOKEN>`\n3. Start an attendance session via REST API: `POST /attendance/start`\n4. Use the WebSocket events below for real-time updates\n\n## Authentication\n\nThe WebSocket connection requires a valid JWT token passed as a query parameter.\n\n## Event Format\n\nAll messages are JSON objects with the structure:\n```json\n{\n  \"event\": \"EVENT_NAME\",\n  \"data\": { ... }\n}\n```\n\n## Error Response\n\nErrors are returned as:\n```json\n{\n  \"event\": \"ERROR\",\n  \"data\": { \"message\": \"Error description\" }\n}\n```",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "wsBaseUrl",
+      "value": "ws://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string",
+      "description": "JWT token from login response"
+    },
+    {
+      "key": "studentId",
+      "value": "",
+      "type": "string",
+      "description": "Student ID for marking attendance"
+    }
+  ],
+  "item": [
+    {
+      "name": "WebSocket Connection",
+      "item": [
+        {
+          "name": "Connect as Teacher",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{wsBaseUrl}}/ws?token={{token}}",
+              "host": ["{{wsBaseUrl}}"],
+              "path": ["ws"],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "description": "JWT token for teacher authentication"
+                }
+              ]
+            },
+            "description": "Connect to WebSocket as a teacher.\n\n**Steps:**\n1. Login as teacher via REST API\n2. Copy the token to the `token` variable\n3. Connect to this WebSocket endpoint\n\n**Note:** In Postman, use the WebSocket Request feature (New → WebSocket Request)"
+          }
+        },
+        {
+          "name": "Connect as Student",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{wsBaseUrl}}/ws?token={{token}}",
+              "host": ["{{wsBaseUrl}}"],
+              "path": ["ws"],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "description": "JWT token for student authentication"
+                }
+              ]
+            },
+            "description": "Connect to WebSocket as a student.\n\n**Steps:**\n1. Login as student via REST API\n2. Copy the token to the `token` variable\n3. Connect to this WebSocket endpoint\n\n**Note:** In Postman, use the WebSocket Request feature (New → WebSocket Request)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Teacher Events",
+      "item": [
+        {
+          "name": "ATTENDANCE_MARKED",
+          "request": {
+            "description": "**Teacher Only** - Mark a student's attendance status.\n\nThis event broadcasts the attendance update to all connected clients.\n\n**Required:** An active attendance session must be started via `POST /attendance/start`\n\n**Request Format:**\n```json\n{\n  \"event\": \"ATTENDANCE_MARKED\",\n  \"data\": {\n    \"studentId\": \"<student_object_id>\",\n    \"status\": \"present\" | \"absent\"\n  }\n}\n```\n\n**Broadcast Response:**\n```json\n{\n  \"event\": \"ATTENDANCE_MARKED\",\n  \"data\": {\n    \"studentId\": \"<student_object_id>\",\n    \"status\": \"present\" | \"absent\"\n  }\n}\n```\n\n**Possible Errors:**\n- `Forbidden, teacher event only` - Non-teacher tried to use this event\n- `No active attendance session` - No session started",
+            "url": {
+              "raw": "{{wsBaseUrl}}/ws?token={{token}}",
+              "host": ["{{wsBaseUrl}}"],
+              "path": ["ws"],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{token}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "TODAY_SUMMARY",
+          "request": {
+            "description": "**Teacher Only** - Get summary of today's attendance.\n\nThis event broadcasts the summary to all connected clients.\n\n**Required:** An active attendance session must be started via `POST /attendance/start`\n\n**Request Format:**\n```json\n{\n  \"event\": \"TODAY_SUMMARY\"\n}\n```\n\n**Broadcast Response:**\n```json\n{\n  \"event\": \"TODAY_SUMMARY\",\n  \"data\": {\n    \"present\": 15,\n    \"absent\": 5,\n    \"total\": 20\n  }\n}\n```\n\n**Possible Errors:**\n- `Forbidden, teacher event only` - Non-teacher tried to use this event\n- `No active attendance session` - No session started",
+            "url": {
+              "raw": "{{wsBaseUrl}}/ws?token={{token}}",
+              "host": ["{{wsBaseUrl}}"],
+              "path": ["ws"],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{token}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "DONE",
+          "request": {
+            "description": "**Teacher Only** - Finalize and persist attendance to database.\n\nThis event:\n1. Marks all unmarked students as absent\n2. Persists all attendance records to MongoDB\n3. Clears the active session\n4. Broadcasts final summary to all clients\n\n**Required:** An active attendance session must be started via `POST /attendance/start`\n\n**Request Format:**\n```json\n{\n  \"event\": \"DONE\"\n}\n```\n\n**Broadcast Response:**\n```json\n{\n  \"event\": \"DONE\",\n  \"data\": {\n    \"message\": \"Attendance persisted\",\n    \"present\": 15,\n    \"absent\": 5,\n    \"total\": 20\n  }\n}\n```\n\n**Possible Errors:**\n- `Forbidden, teacher event only` - Non-teacher tried to use this event\n- `No active attendance session` - No session started",
+            "url": {
+              "raw": "{{wsBaseUrl}}/ws?token={{token}}",
+              "host": ["{{wsBaseUrl}}"],
+              "path": ["ws"],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{token}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Student Events",
+      "item": [
+        {
+          "name": "MY_ATTENDANCE",
+          "request": {
+            "description": "**Student Only** - Get your own attendance status.\n\nThis event returns a unicast response only to the requesting student.\n\n**Required:** An active attendance session must be started by a teacher\n\n**Request Format:**\n```json\n{\n  \"event\": \"MY_ATTENDANCE\"\n}\n```\n\n**Unicast Response:**\n```json\n{\n  \"event\": \"MY_ATTENDANCE\",\n  \"data\": {\n    \"status\": \"present\" | \"absent\" | \"not yet updated\"\n  }\n}\n```\n\n**Possible Errors:**\n- `Forbidden, student event only` - Non-student tried to use this event\n- `No active attendance session` - No session started",
+            "url": {
+              "raw": "{{wsBaseUrl}}/ws?token={{token}}",
+              "host": ["{{wsBaseUrl}}"],
+              "path": ["ws"],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{token}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Message Templates",
+      "item": [
+        {
+          "name": "Mark Student Present",
+          "request": {
+            "description": "**Copy this JSON to send via WebSocket:**\n\n```json\n{\n  \"event\": \"ATTENDANCE_MARKED\",\n  \"data\": {\n    \"studentId\": \"{{studentId}}\",\n    \"status\": \"present\"\n  }\n}\n```",
+            "url": {
+              "raw": "{{wsBaseUrl}}/ws?token={{token}}",
+              "host": ["{{wsBaseUrl}}"],
+              "path": ["ws"],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{token}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Mark Student Absent",
+          "request": {
+            "description": "**Copy this JSON to send via WebSocket:**\n\n```json\n{\n  \"event\": \"ATTENDANCE_MARKED\",\n  \"data\": {\n    \"studentId\": \"{{studentId}}\",\n    \"status\": \"absent\"\n  }\n}\n```",
+            "url": {
+              "raw": "{{wsBaseUrl}}/ws?token={{token}}",
+              "host": ["{{wsBaseUrl}}"],
+              "path": ["ws"],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{token}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Today Summary",
+          "request": {
+            "description": "**Copy this JSON to send via WebSocket:**\n\n```json\n{\n  \"event\": \"TODAY_SUMMARY\"\n}\n```",
+            "url": {
+              "raw": "{{wsBaseUrl}}/ws?token={{token}}",
+              "host": ["{{wsBaseUrl}}"],
+              "path": ["ws"],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{token}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get My Attendance (Student)",
+          "request": {
+            "description": "**Copy this JSON to send via WebSocket:**\n\n```json\n{\n  \"event\": \"MY_ATTENDANCE\"\n}\n```",
+            "url": {
+              "raw": "{{wsBaseUrl}}/ws?token={{token}}",
+              "host": ["{{wsBaseUrl}}"],
+              "path": ["ws"],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{token}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Finalize Attendance",
+          "request": {
+            "description": "**Copy this JSON to send via WebSocket:**\n\n```json\n{\n  \"event\": \"DONE\"\n}\n```",
+            "url": {
+              "raw": "{{wsBaseUrl}}/ws?token={{token}}",
+              "host": ["{{wsBaseUrl}}"],
+              "path": ["ws"],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{token}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+
